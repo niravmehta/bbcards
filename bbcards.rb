@@ -660,7 +660,7 @@ else
 	arg_defs["-i"]          = "icon"
 	arg_defs["--icon"]      = "icon"
 	arg_defs["-o"]          = "output"
-	arg_defs["-output"]     = "output"
+	arg_defs["--output"]     = "output"
 	
 	flag_defs["-s"]            = "small"
 	flag_defs["--small"]       = "small"
