@@ -30,9 +30,14 @@ require "prawn/measurement_extensions"
 
 MM_PER_INCH=25.4
 
-PAPER_NAME   = "LETTER"
-PAPER_HEIGHT = (MM_PER_INCH*11.0).mm;
-PAPER_WIDTH  = (MM_PER_INCH*8.5).mm;
+#PAPER_NAME   = "LETTER"
+#PAPER_HEIGHT = (MM_PER_INCH*11.0).mm;
+#PAPER_WIDTH  = (MM_PER_INCH*8.5).mm;
+
+PAPER_NAME   = "A4"
+PAPER_HEIGHT = (MM_PER_INCH*11.7).mm;
+PAPER_WIDTH  = (MM_PER_INCH*8.3).mm;
+
 
 
 def get_card_geometry(card_width_inches=2.0, card_height_inches=2.0, rounded_corners=false, one_card_per_page=false)
@@ -138,7 +143,7 @@ def render_card_page(pdf, card_geometry, icon, statements, is_black, is_logo_pag
 	pdf.font_size = 14
 	pdf.line_width(0.5);
 
-	
+
 	if(is_black)
 		pdf.canvas do
 			pdf.rectangle(pdf.bounds.top_left,pdf.bounds.width, pdf.bounds.height)
@@ -491,14 +496,18 @@ g	end
 	if white_pages.length > 0 or black_pages.length > 0
 		pdf = Prawn::Document.new(
 			page_size: [card_geometry["paper_width"], card_geometry["paper_height"]],
-			left_margin: card_geometry["margin_left"],
-			right_margin: card_geometry["margin_left"],
-			top_margin: card_geometry["margin_top"],
-			bottom_margin: card_geometry["margin_top"],
+			margin: [card_geometry["margin_top"], card_geometry["margin_left"]],
 			info: { :Title => title, :CreationDate => Time.now, :Producer => "Bigger, Blacker Cards", :Creator=>"Bigger, Blacker Cards" }
 			)
-		load_ttf_fonts("/usr/share/fonts/truetype/msttcorefonts", pdf.font_families)
 
+		pdf.font_families.update(
+			"NotoSans" => {
+		        :normal => "./fonts/NotoSans-Regular.ttf",
+		        :italic => "./fonts/NotoSans-Italic.ttf",
+		        :bold => "./fonts/NotoSans-Bold.ttf",
+		        :bold_italic => "./fonts/NotoSans-BoldItalic.ttf"
+		    })
+		load_ttf_fonts("./fonts", pdf.font_families)
 
 		white_pages.each_with_index do |statements, page|
 			render_card_page(pdf, card_geometry, icon_file, statements, false, false) #render front of cards
