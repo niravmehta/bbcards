@@ -34,9 +34,9 @@ MM_PER_INCH=25.4
 #PAPER_HEIGHT = (MM_PER_INCH*11.0).mm;
 #PAPER_WIDTH  = (MM_PER_INCH*8.5).mm;
 
-PAPER_NAME   = "A4"
+PAPER_NAME   = "A3"
 PAPER_HEIGHT = (MM_PER_INCH*11.7).mm;
-PAPER_WIDTH  = (MM_PER_INCH*8.3).mm;
+PAPER_WIDTH  = (MM_PER_INCH*16.5).mm;
 
 
 
@@ -70,25 +70,47 @@ def get_card_geometry(card_width_inches=2.0, card_height_inches=2.0, rounded_cor
 
 end
 
-def draw_grid(pdf, card_geometry)
+def draw_grid(pdf, card_geometry, cutting_marks_only=false)
 	
 	pdf.stroke do
 		if card_geometry["rounded_corners"] == false
 			#Draw vertical lines
 			0.upto(card_geometry["cards_across"]) do |i|
-				pdf.line(
-					[card_geometry["card_width"]*i, 0],
-					[card_geometry["card_width"]*i, card_geometry["page_height"]]
-					)
+				if cutting_marks_only == true
+					pdf.line(
+						[card_geometry["card_width"]*i, 0],
+						[card_geometry["card_width"]*i, 10]
+						)
+					pdf.line(
+						[card_geometry["card_width"]*i, card_geometry["page_height"]-10],
+						[card_geometry["card_width"]*i, card_geometry["page_height"]]
+						)
+				else
+					pdf.line(
+						[card_geometry["card_width"]*i, 0],
+						[card_geometry["card_width"]*i, card_geometry["page_height"]]
+						)
+				end
 			end
 		
 			#Draw horizontal lines
 			0.upto(card_geometry["cards_high"]) do |i|
-				pdf.line(
-					[0,                           card_geometry["card_height"]*i],
-					[card_geometry["page_width"], card_geometry["card_height"]*i]
-					)
-		
+				if cutting_marks_only == true
+					pdf.line(
+						[0,                           card_geometry["card_height"]*i],
+						[10, 						  card_geometry["card_height"]*i]
+						)
+					pdf.line(
+						[card_geometry["page_width"]-10,                           card_geometry["card_height"]*i],
+						[card_geometry["page_width"], card_geometry["card_height"]*i]
+						)
+				else
+					pdf.line(
+						[0,                           card_geometry["card_height"]*i],
+						[card_geometry["page_width"], card_geometry["card_height"]*i]
+						)
+				end
+
 			end
 		else
 			0.upto(card_geometry["cards_across"]-1) do |i|
@@ -111,11 +133,11 @@ def box(pdf, card_geometry, index, &blck)
 	column = index%card_geometry["cards_across"]
 	row = card_geometry["cards_high"] - index/card_geometry["cards_across"]
 
-	# Margin: 10pt
-	x = card_geometry["card_width"] * column + 10
-	y = card_geometry["card_height"] * row - 10
+	# Margin: 14pt
+	x = card_geometry["card_width"] * column + 14
+	y = card_geometry["card_height"] * row - 14
 
-	pdf.bounding_box([x,y], width: card_geometry["card_width"]-20, height: card_geometry["card_height"]-10, &blck)
+	pdf.bounding_box([x,y], width: card_geometry["card_width"]-28, height: card_geometry["card_height"]-14, &blck)
 end
 
 def draw_logos(pdf, card_geometry, icon, center)
@@ -125,7 +147,10 @@ def draw_logos(pdf, card_geometry, icon, center)
 			logo_max_height = 15
 			logo_max_width = card_geometry["card_width"]/2
 			if center
-				pdf.image icon, fit: [logo_max_width*4,logo_max_height*4], :vposition => :center, :position => :center
+				#pdf.image icon, fit: [logo_max_width*4,logo_max_height*4], :vposition => :center, :position => :center
+				logo = idx%4
+				#pdf.image "./bg-logo" + logo.to_s + ".png", fit: [pdf.bounds.width,pdf.bounds.height], :vposition => :center, :position => :center
+				pdf.image "./bg-logo0.png", fit: [pdf.bounds.width,pdf.bounds.height], :vposition => :center, :position => :center
 			else
 				pdf.image icon, fit: [logo_max_width,logo_max_height], at: [pdf.bounds.left,pdf.bounds.bottom+25]
 			end
@@ -137,11 +162,39 @@ end
 
 
 
-def render_card_page(pdf, card_geometry, icon, statements, is_black, is_logo_page)
+def render_card_page(pdf, card_geometry, icon, statements, is_black, is_logo_page, cutting_marks_only=false)
 	
 	pdf.font "Helvetica", :style => :normal
 	pdf.font_size = 14
 	pdf.line_width(0.5);
+
+
+	# Paint background
+	if (is_logo_page)
+		if (is_black)
+			pdf.stroke_color "74ae05"
+			pdf.fill_color "74ae05"
+		else
+			pdf.stroke_color "ff7f2a"
+			pdf.fill_color "ff7f2a"
+		end
+	else
+		if (is_black)
+			pdf.stroke_color "010101"
+			pdf.fill_color "010101"
+		else
+			pdf.stroke_color "ffffff"
+			pdf.fill_color "ffffff"
+		end
+	end
+
+	pdf.fill_and_stroke(:fill_color=>pdf.fill_color, :stroke_color=>pdf.stroke_color) do
+		pdf.canvas do
+			pdf.rectangle(pdf.bounds.top_left,pdf.bounds.width, pdf.bounds.height)
+		end
+	end
+	pdf.stroke_color "cccccc"
+	pdf.fill_color "000000"
 
 
 	if(is_black)
@@ -149,19 +202,40 @@ def render_card_page(pdf, card_geometry, icon, statements, is_black, is_logo_pag
 			pdf.rectangle(pdf.bounds.top_left,pdf.bounds.width, pdf.bounds.height)
 		end
 
-		pdf.fill_and_stroke(:fill_color=>"000000", :stroke_color=>"000000") do
-			pdf.canvas do
-				pdf.rectangle(pdf.bounds.top_left,pdf.bounds.width, pdf.bounds.height)
-			end
+		#pdf.fill_and_stroke(:fill_color=>"010101", :stroke_color=>"010101") do
+		#	pdf.canvas do
+		#		pdf.rectangle(pdf.bounds.top_left,pdf.bounds.width, pdf.bounds.height)
+		#	end
+		#end
+		if cutting_marks_only == true
+			pdf.stroke_color "000000"
+		else
+			pdf.stroke_color "CCCCCC"
 		end
-		pdf.stroke_color "ffffff"
+
 		pdf.fill_color "ffffff"
 	else
-		pdf.stroke_color "000000"
+		#if (is_logo_page)
+			#pdf.canvas do
+			#	pdf.rectangle(pdf.bounds.top_left,pdf.bounds.width, pdf.bounds.height)
+			#end
+		#	pdf.stroke_color "ff7f2a"
+		#	pdf.fill_color "ff7f2a"
+		#	pdf.fill_and_stroke(:fill_color=>"ff7f2a", :stroke_color=>"010101") do
+		#		pdf.canvas do
+		#			pdf.rectangle(pdf.bounds.top_left,pdf.bounds.width, pdf.bounds.height)
+		#		end
+		#	end
+		#end
+		if cutting_marks_only == true
+			pdf.stroke_color "ffffff"
+		else
+			pdf.stroke_color "CCCCCC"
+		end
 		pdf.fill_color "000000"
 	end
 
-	draw_grid(pdf, card_geometry)
+	draw_grid(pdf, card_geometry, cutting_marks_only)
 	if !is_logo_page 
 		statements.each_with_index do |line, idx|
 			box(pdf, card_geometry, idx) do
@@ -299,38 +373,38 @@ def render_card_page(pdf, card_geometry, icon, statements, is_black, is_logo_pag
 				#pick 2
 				if is_pick2
 					pdf.text_box "PICK", size:11, align: :right, width:30, at: [pdf.bounds.right-50,pdf.bounds.bottom+20]
-					pdf.fill_and_stroke(:fill_color=>"ffffff", :stroke_color=>"ffffff") do
+					pdf.fill_and_stroke(:fill_color=>"dddddd", :stroke_color=>"dddddd") do
 						pdf.circle([pdf.bounds.right-10,pdf.bounds.bottom+15.5],7.5)
 					end
-					pdf.stroke_color '000000'
-					pdf.fill_color '000000'
-					pdf.text_box "2", color:"000000", size:14, width:8, align: :center, at:[pdf.bounds.right-14,pdf.bounds.bottom+21]
-					pdf.stroke_color "ffffff"
-					pdf.fill_color "ffffff"
+					pdf.stroke_color '010101'
+					pdf.fill_color '010101'
+					pdf.text_box "2", color:"010101", size:14, width:8, align: :center, at:[pdf.bounds.right-14,pdf.bounds.bottom+21]
+					pdf.stroke_color "dddddd"
+					pdf.fill_color "dddddd"
 				end
 		
 				#pick 3
 				if is_pick3
 					pdf.text_box "PICK", size:11, align: :right, width:30, at: [pdf.bounds.right-50,pdf.bounds.bottom+20]
-					pdf.fill_and_stroke(:fill_color=>"ffffff", :stroke_color=>"ffffff") do
+					pdf.fill_and_stroke(:fill_color=>"dddddd", :stroke_color=>"dddddd") do
 						pdf.circle([pdf.bounds.right-10,pdf.bounds.bottom+15.5],7.5)
 					end
-					pdf.stroke_color '000000'
-					pdf.fill_color '000000'
-					pdf.text_box "3", color:"000000", size:14, width:8, align: :center, at:[pdf.bounds.right-14,pdf.bounds.bottom+21]
-					pdf.stroke_color "ffffff"
-					pdf.fill_color "ffffff"
+					pdf.stroke_color '010101'
+					pdf.fill_color '010101'
+					pdf.text_box "3", color:"010101", size:14, width:8, align: :center, at:[pdf.bounds.right-14,pdf.bounds.bottom+21]
+					pdf.stroke_color "dddddd"
+					pdf.fill_color "dddddd"
 
 
 					pdf.text_box "DRAW", size:11, align: :right, width:35, at: [pdf.bounds.right-55,pdf.bounds.bottom+40]
-					pdf.fill_and_stroke(:fill_color=>"ffffff", :stroke_color=>"ffffff") do
+					pdf.fill_and_stroke(:fill_color=>"dddddd", :stroke_color=>"dddddd") do
 						pdf.circle([pdf.bounds.right-10,pdf.bounds.bottom+35.5],7.5)
 					end
-					pdf.stroke_color '000000'
-					pdf.fill_color '000000'
-					pdf.text_box "2", color:"000000", size:14, width:8, align: :center, at:[pdf.bounds.right-14,pdf.bounds.bottom+41]
-					pdf.stroke_color "ffffff"
-					pdf.fill_color "ffffff"
+					pdf.stroke_color '010101'
+					pdf.fill_color '010101'
+					pdf.text_box "2", color:"010101", size:14, width:8, align: :center, at:[pdf.bounds.right-14,pdf.bounds.bottom+41]
+					pdf.stroke_color "dddddd"
+					pdf.fill_color "dddddd"
 				end
 			end
 		end
@@ -467,7 +541,7 @@ def render_cards(directory=".", white_file="white.txt", black_file="black.txt", 
 	end
 	
 	if output_to_stdout and title.nil?
-		title = "Bigger, Blacker Cards"
+		title = "Meta Cards"
 	elsif title.nil? and output_file != "cards.pdf"
 		title = output_file.split(File::Separator).pop.gsub(/.pdf$/, "")
 	end
@@ -479,7 +553,7 @@ def render_cards(directory=".", white_file="white.txt", black_file="black.txt", 
 	if white_file == nil and black_file == nil and white_string == "" and black_string == ""
 		white_string = " "
 		black_string = " "
-g	end
+	end
 	if white_string != "" || white_file == nil
 		white_pages = load_pages_from_string(white_string, card_geometry)
 	else
@@ -497,7 +571,7 @@ g	end
 		pdf = Prawn::Document.new(
 			page_size: [card_geometry["paper_width"], card_geometry["paper_height"]],
 			margin: [card_geometry["margin_top"], card_geometry["margin_left"]],
-			info: { :Title => title, :CreationDate => Time.now, :Producer => "Bigger, Blacker Cards", :Creator=>"Bigger, Blacker Cards" }
+			info: { :Title => title, :CreationDate => Time.now, :Producer => "Meta Cards", :Creator=>"Meta Cards" }
 			)
 
 		pdf.font_families.update(
@@ -510,19 +584,19 @@ g	end
 		load_ttf_fonts("./fonts", pdf.font_families)
 
 		white_pages.each_with_index do |statements, page|
-			render_card_page(pdf, card_geometry, icon_file, statements, false, false) #render front of cards
+			render_card_page(pdf, card_geometry, icon_file, statements, false, false, print_background) #render front of cards
 			if print_background
 				pdf.start_new_page
-				render_card_page(pdf, card_geometry, icon_file, statements, false, true) #render back of cards
+				render_card_page(pdf, card_geometry, icon_file, statements, false, true, print_background) #render back of cards
 			end
 			pdf.start_new_page unless page >= white_pages.length-1
 		end
 		pdf.start_new_page unless white_pages.length == 0 || black_pages.length == 0
 		black_pages.each_with_index do |statements, page|
-			render_card_page(pdf, card_geometry, icon_file, statements, true, false) #render front of cards
+			render_card_page(pdf, card_geometry, icon_file, statements, true, false, print_background) #render front of cards
 			if print_background
 				pdf.start_new_page
-				render_card_page(pdf, card_geometry, icon_file, statements, true, true) #render back of cards
+				render_card_page(pdf, card_geometry, icon_file, statements, true, true, print_background) #render back of cards
 			end
 			pdf.start_new_page unless page >= black_pages.length-1
 		end
