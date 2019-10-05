@@ -79,10 +79,10 @@ def draw_grid(pdf, card_geometry, cutting_marks_only=false)
 				if cutting_marks_only == true
 					pdf.line(
 						[card_geometry["card_width"]*i, 0],
-						[card_geometry["card_width"]*i, 10]
+						[card_geometry["card_width"]*i, 6]
 						)
 					pdf.line(
-						[card_geometry["card_width"]*i, card_geometry["page_height"]-10],
+						[card_geometry["card_width"]*i, card_geometry["page_height"]-6],
 						[card_geometry["card_width"]*i, card_geometry["page_height"]]
 						)
 				else
@@ -98,10 +98,10 @@ def draw_grid(pdf, card_geometry, cutting_marks_only=false)
 				if cutting_marks_only == true
 					pdf.line(
 						[0,                           card_geometry["card_height"]*i],
-						[10, 						  card_geometry["card_height"]*i]
+						[6, 						  card_geometry["card_height"]*i]
 						)
 					pdf.line(
-						[card_geometry["page_width"]-10,                           card_geometry["card_height"]*i],
+						[card_geometry["page_width"]-6,                           card_geometry["card_height"]*i],
 						[card_geometry["page_width"], card_geometry["card_height"]*i]
 						)
 				else
@@ -144,7 +144,7 @@ def draw_logos(pdf, card_geometry, icon, center)
 	idx=0
 	while idx < card_geometry["cards_across"] * card_geometry["cards_high"]
 		box(pdf, card_geometry, idx) do
-			logo_max_height = 15
+			logo_max_height = 20
 			logo_max_width = card_geometry["card_width"]/2
 			if center
 				#pdf.image icon, fit: [logo_max_width*4,logo_max_height*4], :vposition => :center, :position => :center
@@ -208,7 +208,7 @@ def render_card_page(pdf, card_geometry, icon, statements, is_black, is_logo_pag
 		#	end
 		#end
 		if cutting_marks_only == true
-			pdf.stroke_color "000000"
+			pdf.stroke_color "CCCCCC" #"000000"
 		else
 			pdf.stroke_color "CCCCCC"
 		end
@@ -228,7 +228,7 @@ def render_card_page(pdf, card_geometry, icon, statements, is_black, is_logo_pag
 		#	end
 		#end
 		if cutting_marks_only == true
-			pdf.stroke_color "ffffff"
+			pdf.stroke_color "CCCCCC" #"ffffff"
 		else
 			pdf.stroke_color "CCCCCC"
 		end
@@ -409,7 +409,14 @@ def render_card_page(pdf, card_geometry, icon, statements, is_black, is_logo_pag
 			end
 		end
 	end
-	draw_logos(pdf, card_geometry, icon, is_logo_page)
+
+	if (is_black) 
+		logo_file = "./default.png"
+	else 
+		logo_file = icon
+	end
+
+	draw_logos(pdf, card_geometry, logo_file, is_logo_page)
 	pdf.stroke_color "000000"
 	pdf.fill_color "000000"
 
@@ -583,23 +590,43 @@ def render_cards(directory=".", white_file="white.txt", black_file="black.txt", 
 		    })
 		load_ttf_fonts("./fonts", pdf.font_families)
 
-		white_pages.each_with_index do |statements, page|
-			render_card_page(pdf, card_geometry, icon_file, statements, false, false, print_background) #render front of cards
-			if print_background
+		# If large cards, no permutations
+		if (card_geometry["card_height"] > 88)
+			white_pages.each_with_index do |w_statements, w_page|
+				render_card_page(pdf, card_geometry, icon_file, w_statements.dup, false, false, true) #render front of cards
+				b_statements = black_pages[w_page]
 				pdf.start_new_page
-				render_card_page(pdf, card_geometry, icon_file, statements, false, true, print_background) #render back of cards
+				render_card_page(pdf, card_geometry, icon_file, b_statements.dup, true, false, true) #render front of cards
+				pdf.start_new_page unless w_page >= white_pages.length-1
 			end
-			pdf.start_new_page unless page >= white_pages.length-1
-		end
-		pdf.start_new_page unless white_pages.length == 0 || black_pages.length == 0
-		black_pages.each_with_index do |statements, page|
-			render_card_page(pdf, card_geometry, icon_file, statements, true, false, print_background) #render front of cards
-			if print_background
-				pdf.start_new_page
-				render_card_page(pdf, card_geometry, icon_file, statements, true, true, print_background) #render back of cards
+		else
+			white_pages.each_with_index do |w_statements, w_page|
+				black_pages.each_with_index do |b_statements, b_page|
+					render_card_page(pdf, card_geometry, icon_file, w_statements.dup, false, false, true) #render front of cards
+					pdf.start_new_page
+					render_card_page(pdf, card_geometry, icon_file, b_statements.dup, true, false, true) #render front of cards
+					pdf.start_new_page unless w_page >= white_pages.length-1 && b_page >= black_pages.length-1
+				end
 			end
-			pdf.start_new_page unless page >= black_pages.length-1
 		end
+
+		# white_pages.each_with_index do |statements, page|
+		# 	render_card_page(pdf, card_geometry, icon_file, statements, false, false, true) #render front of cards
+		# 	if print_background
+		# 		pdf.start_new_page
+		# 		render_card_page(pdf, card_geometry, icon_file, statements, false, true, true) #render back of cards
+		# 	end
+		# 	pdf.start_new_page unless page >= white_pages.length-1
+		# end
+		# pdf.start_new_page unless white_pages.length == 0 || black_pages.length == 0
+		# black_pages.each_with_index do |statements, page|
+		# 	render_card_page(pdf, card_geometry, icon_file, statements, true, false, true) #render front of cards
+		# 	if print_background
+		# 		pdf.start_new_page
+		# 		render_card_page(pdf, card_geometry, icon_file, statements, true, true, true) #render back of cards
+		# 	end
+		# 	pdf.start_new_page unless page >= black_pages.length-1
+		# end
 
 		if output_to_stdout
 			puts "Content-Type: application/pdf"
@@ -762,7 +789,7 @@ else
 	args = parse_args(arg_defs, flag_defs)
 	card_geometry = get_card_geometry(2.0,2.0, !(args["rounded"]).nil?, !(args["oneperpage"]).nil? )
 	if args.has_key? "large"
-		card_geometry = get_card_geometry(2.5,3.5, (not (args["rounded"]).nil?), (not (args["oneperpage"]).nil? ))
+		card_geometry = get_card_geometry(2.0,2.75, (not (args["rounded"]).nil?), (not (args["oneperpage"]).nil? ))
 	end
 	
 	if args.has_key? "help" or args.length == 0 or ( (not args.has_key? "white") and (not args.has_key? "black") and (not args.has_key? "dir") )
